@@ -49,6 +49,8 @@ class _SchemaExtractor(ast.NodeVisitor):
                     schema_type=schema_type,
                     fields=fields,
                     source_code=source_code,
+                    start_line=node.lineno,
+                    end_line=node.end_lineno or node.lineno,
                     used_by=[],
                 )
             )

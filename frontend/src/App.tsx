@@ -596,6 +596,7 @@ export default function App() {
               operationError={operationError}
               selectedNodeId={selectedNodeId}
               project={project ?? null}
+              sessionId={session?.id ?? null}
               onAnswer={async (qId, answer) => { await sendAnswer(qId, answer) }}
               onApply={handleApply}
               onRevert={() => revert()}

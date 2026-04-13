@@ -67,6 +67,8 @@ class SchemaNode(CamelModel):
     schema_type: Literal["pydantic", "typeddict", "dataclass"]
     fields: list[FieldInfo]
     source_code: str
+    start_line: int          # line number of the class definition (1-indexed)
+    end_line: int
     used_by: list[str]       # FunctionNode IDs that use this schema
 
 

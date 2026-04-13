@@ -46,6 +46,8 @@ describe('Phase 0 — TypeScript type contracts', () => {
       schemaType: 'pydantic',
       fields: [{ name: 'job_id', type: 'str', isOptional: false, default: null, description: null }],
       sourceCode: 'class JobResponse(BaseModel): ...',
+      startLine: 1,
+      endLine: 3,
       usedBy: [],
     }
     expect(schema.schemaType).toBe('pydantic')

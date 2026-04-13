@@ -35,12 +35,21 @@ export function IDEView({
   // ── Open the file of the linked graph node ─────────────────────────────────
   useEffect(() => {
     if (!linkedNodeId) return
+
+    // Check functions first
     const fn = project.functions.find((f) => f.id === linkedNodeId)
-    if (!fn) return
-    if (fn.filePath !== selectedFile) {
-      loadFile(fn.filePath)
+    if (fn) {
+      if (fn.filePath !== selectedFile) loadFile(fn.filePath)
+      setFocusLine(fn.startLine)
+      return
     }
-    setFocusLine(fn.startLine)
+
+    // Fall back to schemas
+    const schema = project.schemas.find((s) => s.id === linkedNodeId)
+    if (schema) {
+      if (schema.filePath !== selectedFile) loadFile(schema.filePath)
+      setFocusLine(schema.startLine)
+    }
   }, [linkedNodeId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function loadFile(filePath: string) {

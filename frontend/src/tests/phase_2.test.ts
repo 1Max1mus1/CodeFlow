@@ -53,6 +53,8 @@ const SCHEMA: SchemaNode = {
     { name: 'job_status', type: 'str', isOptional: false, default: null, description: null },
   ],
   sourceCode: 'class JobResponse(BaseModel): ...',
+  startLine: 1,
+  endLine: 5,
   usedBy: ['src/services/job.py::JobManager::create_job'],
 }
 

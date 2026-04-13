@@ -51,6 +51,8 @@ export interface SchemaNode {
   schemaType: 'pydantic' | 'typeddict' | 'dataclass'
   fields: FieldInfo[]
   sourceCode: string
+  startLine: number
+  endLine: number
   usedBy: string[]      // FunctionNode IDs
 }
 
