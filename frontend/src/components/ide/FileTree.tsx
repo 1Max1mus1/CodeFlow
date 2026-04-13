@@ -7,8 +7,13 @@ interface FileTreeProps {
 }
 
 export function FileTree({ project, selectedFile, onSelectFile }: FileTreeProps) {
-  // Collect unique file paths from functions
-  const filePaths = [...new Set(project.functions.map((f) => f.filePath))].sort()
+  // Collect unique file paths from both functions AND schemas
+  const filePaths = [
+    ...new Set([
+      ...project.functions.map((f) => f.filePath),
+      ...project.schemas.map((s) => s.filePath),
+    ]),
+  ].sort()
 
   // Group by directory
   const byDir = new Map<string, string[]>()
@@ -25,7 +30,7 @@ export function FileTree({ project, selectedFile, onSelectFile }: FileTreeProps)
     <div className="w-56 bg-gray-900 border-r border-gray-700 flex flex-col h-full overflow-hidden">
       <div className="px-3 py-2 border-b border-gray-700">
         <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Files</h2>
-        <p className="text-xs text-gray-600 mt-0.5">{filePaths.length} source files</p>
+        <p className="text-xs text-gray-600 mt-0.5">{filePaths.length} source file{filePaths.length !== 1 ? 's' : ''}</p>
       </div>
 
       <div className="flex-1 overflow-y-auto py-1">

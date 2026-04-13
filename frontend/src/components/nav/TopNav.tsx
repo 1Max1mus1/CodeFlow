@@ -6,6 +6,7 @@ interface TopNavProps {
   activeView: AppView
   onViewChange: (view: AppView) => void
   operationHistory: Operation[]
+  onRollbackClick: (op: Operation) => void
 }
 
 const STATUS_COLOR: Record<string, string> = {
@@ -22,7 +23,7 @@ const OP_ICON: Record<string, string> = {
   add_api: '🔗',
 }
 
-export function TopNav({ projectName, activeView, onViewChange, operationHistory }: TopNavProps) {
+export function TopNav({ projectName, activeView, onViewChange, operationHistory, onRollbackClick }: TopNavProps) {
   return (
     <div className="h-10 bg-gray-900 border-b border-gray-700 flex items-center px-4 gap-4 shrink-0 z-30">
       {/* Logo + project name */}
@@ -67,18 +68,33 @@ export function TopNav({ projectName, activeView, onViewChange, operationHistory
         {operationHistory.length === 0 ? (
           <span className="text-xs text-gray-600">No operations yet</span>
         ) : (
-          operationHistory.slice(0, 5).map((op) => (
-            <span
-              key={op.id}
-              title={`${op.type} · ${op.status}`}
-              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs ${
-                STATUS_COLOR[op.status] ?? 'bg-gray-700 text-gray-400'
-              }`}
-            >
-              <span>{OP_ICON[op.type] ?? '•'}</span>
-              <span className="hidden sm:inline">{op.type}</span>
-            </span>
-          ))
+          operationHistory.slice(0, 5).map((op) => {
+            const canRollback = op.status === 'applied'
+            return canRollback ? (
+              <button
+                key={op.id}
+                onClick={() => onRollbackClick(op)}
+                title={`${op.type} · ${op.status} — 点击回撤至此`}
+                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs cursor-pointer transition-opacity hover:opacity-70 ${
+                  STATUS_COLOR[op.status] ?? 'bg-gray-700 text-gray-400'
+                }`}
+              >
+                <span>{OP_ICON[op.type] ?? '•'}</span>
+                <span className="hidden sm:inline">{op.type}</span>
+              </button>
+            ) : (
+              <span
+                key={op.id}
+                title={`${op.type} · ${op.status}`}
+                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs ${
+                  STATUS_COLOR[op.status] ?? 'bg-gray-700 text-gray-400'
+                }`}
+              >
+                <span>{OP_ICON[op.type] ?? '•'}</span>
+                <span className="hidden sm:inline">{op.type}</span>
+              </span>
+            )
+          })
         )}
         {operationHistory.length > 5 && (
           <span className="text-xs text-gray-500">+{operationHistory.length - 5}</span>

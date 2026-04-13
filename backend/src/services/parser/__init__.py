@@ -1,5 +1,6 @@
 """Parser orchestrator: root_path → ParsedProject."""
 import os
+import re
 import hashlib
 from src.models.domain import (
     ParsedProject,
@@ -65,26 +66,41 @@ def parse_project(root_path: str) -> ParsedProject:
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
+def _name_matches(schema_name: str, type_str: str) -> bool:
+    """Return True if schema_name appears as a whole word in type_str.
+
+    Uses word-boundary matching so 'Task' does NOT match inside 'TaskCreate'.
+    """
+    return bool(re.search(r'\b' + re.escape(schema_name) + r'\b', type_str))
+
+
 def _link_schemas(
     functions: list[FunctionNode], schemas: list[SchemaNode]
 ) -> list[FunctionNode]:
-    """Populate uses_schemas on each function based on param/return types."""
+    """Populate uses_schemas on each function and used_by on each schema."""
     schema_name_to_id = {s.name: s.id for s in schemas}
+    schema_by_id = {s.id: s for s in schemas}
 
     for fn in functions:
         used: list[str] = []
         # Check return type
         if fn.return_type:
             for name, sid in schema_name_to_id.items():
-                if name in fn.return_type and sid not in used:
+                if _name_matches(name, fn.return_type) and sid not in used:
                     used.append(sid)
         # Check param types
         for param in fn.params:
             if param.type:
                 for name, sid in schema_name_to_id.items():
-                    if name in param.type and sid not in used:
+                    if _name_matches(name, param.type) and sid not in used:
                         used.append(sid)
         fn.uses_schemas = used
+
+        # Populate used_by on the matching schemas
+        for sid in used:
+            schema = schema_by_id.get(sid)
+            if schema and fn.id not in schema.used_by:
+                schema.used_by.append(fn.id)
 
     return functions
 
@@ -101,7 +117,7 @@ def _build_data_flow_edges(
         if not fn.return_type:
             continue
         for schema_name, schema_id in schema_name_to_id.items():
-            if schema_name not in fn.return_type:
+            if not _name_matches(schema_name, fn.return_type):
                 continue
             edge_id = f"data::{fn.id}::{schema_id}"
             if edge_id in seen:

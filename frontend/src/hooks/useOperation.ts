@@ -9,7 +9,7 @@ import {
 import type { OperationType } from '../types'
 
 export function useOperation() {
-  const { activeOperation, setActiveOperation, setOperationError, pushOperationHistory } = useAppStore()
+  const { activeOperation, setActiveOperation, setOperationError, pushOperationHistory, updateOperationHistory } = useAppStore()
 
   async function startOperation(
     sessionId: string,
@@ -76,10 +76,16 @@ export function useOperation() {
     return response
   }
 
+  async function rollbackById(operationId: string) {
+    const response = await rollbackOperation(operationId)
+    updateOperationHistory(response.operation)
+    return response
+  }
+
   function clearOperation() {
     setActiveOperation(null)
     setOperationError(null)
   }
 
-  return { activeOperation, startOperation, sendAnswer, apply, revert, rollback, clearOperation }
+  return { activeOperation, startOperation, sendAnswer, apply, revert, rollback, rollbackById, clearOperation }
 }

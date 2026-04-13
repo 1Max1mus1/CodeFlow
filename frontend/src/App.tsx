@@ -34,7 +34,7 @@ import { useSession } from './hooks/useSession'
 import { useAppStore } from './store'
 import { projectToFlow } from './utils/projectToFlow'
 import { addExternalAPI } from './services/api'
-import type { FieldInfo } from './types'
+import type { FieldInfo, Operation } from './types'
 
 // ── Register custom node & edge types ────────────────────────────────────────
 
@@ -75,6 +75,7 @@ export default function App() {
   // ── Operation UI state ────────────────────────────────────────────────────
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [deleteConfirmNodeId, setDeleteConfirmNodeId] = useState<string | null>(null)
+  const [rollbackConfirmOp, setRollbackConfirmOp] = useState<Operation | null>(null)
   const [showImportAPIModal, setShowImportAPIModal] = useState(false)
 
   // Context menu state
@@ -104,7 +105,7 @@ export default function App() {
 
   const { project, loadProject } = useProject()
   const { session, graphView, startSession, saveNodePosition } = useSession()
-  const { activeOperation, startOperation, sendAnswer, apply, revert, rollback, clearOperation } = useOperation()
+  const { activeOperation, startOperation, sendAnswer, apply, revert, rollback, rollbackById, clearOperation } = useOperation()
   const { activeView, setActiveView, operationHistory, operationError } = useAppStore()
 
   // Keep refs for stale-closure-safe keyboard handler
@@ -318,6 +319,25 @@ export default function App() {
     }
   }
 
+  // Roll back a specific history operation, then reload the project
+  async function handleRollbackById() {
+    if (!rollbackConfirmOp || !project) return
+    setRollbackConfirmOp(null)
+    try {
+      await rollbackById(rollbackConfirmOp.id)
+      const newProject = await loadProject(project.rootPath)
+      const epId =
+        newProject.entryPoints.find((ep) => ep.id === activeEntryPointId)?.id ??
+        newProject.entryPoints[0]?.id
+      if (epId) {
+        setActiveEntryPointId(epId)
+        await startSession(newProject.id, epId)
+      }
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : 'Failed to rollback operation')
+    }
+  }
+
   // Switch to IDE view and select the given node (for "handle manually" flow)
   function handleGoToCode(nodeId: string) {
     setSelectedNodeId(nodeId)
@@ -423,6 +443,7 @@ export default function App() {
         activeView={activeView}
         onViewChange={setActiveView}
         operationHistory={operationHistory}
+        onRollbackClick={setRollbackConfirmOp}
       />
 
       {/* ── Main content area (below nav) ────────────────────────────────── */}
@@ -499,6 +520,27 @@ export default function App() {
                 />
               </ReactFlow>
 
+              {/* Edge legend */}
+              {project && (
+                <div className="absolute bottom-28 left-3 z-10 bg-gray-900/90 backdrop-blur border border-gray-700 rounded-lg px-3 py-2 pointer-events-none select-none">
+                  <p className="text-gray-500 text-[10px] font-semibold uppercase tracking-wider mb-1.5">边类型</p>
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-2">
+                      <svg width="32" height="10"><line x1="0" y1="5" x2="32" y2="5" stroke="#3b82f6" strokeWidth="2" markerEnd="url(#arr-blue)"/><defs><marker id="arr-blue" markerWidth="4" markerHeight="4" refX="3" refY="2" orient="auto"><path d="M0,0 L4,2 L0,4 Z" fill="#3b82f6"/></marker></defs></svg>
+                      <span className="text-gray-400 text-[10px]">函数调用</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <svg width="32" height="10"><line x1="0" y1="5" x2="32" y2="5" stroke="#f97316" strokeWidth="2" strokeDasharray="5 3" markerEnd="url(#arr-orange)"/><defs><marker id="arr-orange" markerWidth="4" markerHeight="4" refX="3" refY="2" orient="auto"><path d="M0,0 L4,2 L0,4 Z" fill="#f97316"/></marker></defs></svg>
+                      <span className="text-gray-400 text-[10px]">返回该 Schema</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <svg width="32" height="10"><line x1="0" y1="5" x2="32" y2="5" stroke="#a855f7" strokeWidth="2" markerEnd="url(#arr-purple)"/><defs><marker id="arr-purple" markerWidth="4" markerHeight="4" refX="3" refY="2" orient="auto"><path d="M0,0 L4,2 L0,4 Z" fill="#a855f7"/></marker></defs></svg>
+                      <span className="text-gray-400 text-[10px]">参数引用 Schema</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Delete confirmation modal */}
               {deleteConfirmNodeId && (() => {
                 const fn = project?.functions.find((f) => f.id === deleteConfirmNodeId)
@@ -527,6 +569,35 @@ export default function App() {
                   </div>
                 )
               })()}
+
+              {/* Rollback-to-checkpoint confirmation */}
+              {rollbackConfirmOp && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-10">
+                  <div className="bg-gray-800 border border-gray-600 rounded-lg p-6 w-96 shadow-2xl">
+                    <h3 className="text-white font-semibold mb-1">回撤至此操作？</h3>
+                    <p className="text-yellow-400 text-xs mb-3">⚠️ 此操作不可逆，回撤后该操作写入的文件改动将被还原。</p>
+                    <div className="bg-gray-900 rounded px-3 py-2 mb-4 text-xs font-mono">
+                      <span className="text-gray-400">操作类型：</span>
+                      <span className="text-blue-300 ml-1">{rollbackConfirmOp.type}</span>
+                      <span className="text-gray-500 ml-3">ID: {rollbackConfirmOp.id.slice(0, 8)}…</span>
+                    </div>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={handleRollbackById}
+                        className="flex-1 bg-orange-700 hover:bg-orange-600 text-white text-sm font-medium rounded px-4 py-2 transition-colors"
+                      >
+                        确认回撤
+                      </button>
+                      <button
+                        onClick={() => setRollbackConfirmOp(null)}
+                        className="flex-1 bg-gray-700 hover:bg-gray-600 text-gray-200 text-sm font-medium rounded px-4 py-2 transition-colors"
+                      >
+                        取消
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Drag-replace confirmation */}
               {replaceDropCandidate && (

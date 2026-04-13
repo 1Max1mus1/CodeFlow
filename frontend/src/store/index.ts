@@ -26,6 +26,7 @@ interface AppActions {
   setActiveOperation: (operation: Operation | null) => void
   setOperationError: (error: string | null) => void
   pushOperationHistory: (op: Operation) => void
+  updateOperationHistory: (op: Operation) => void
   setActiveView: (view: AppView) => void
   setSelectedNodeId: (id: string | null) => void
 }
@@ -47,6 +48,10 @@ export const useAppStore = create<AppState & AppActions>((set) => ({
   pushOperationHistory: (op) =>
     set((state) => ({
       operationHistory: [op, ...state.operationHistory].slice(0, 20),
+    })),
+  updateOperationHistory: (op) =>
+    set((state) => ({
+      operationHistory: state.operationHistory.map((o) => (o.id === op.id ? op : o)),
     })),
   setActiveView: (activeView) => set({ activeView }),
   setSelectedNodeId: (selectedNodeId) => set({ selectedNodeId }),

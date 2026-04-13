@@ -12,8 +12,11 @@ export function DataFlowEdgeComponent({
   data,
 }: EdgeProps) {
   const [edgePath] = getBezierPath({ sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition })
-  const isCompatible = (data as Record<string, unknown> | undefined)?.isCompatible
-  const color = isCompatible === false ? '#ef4444' : '#f97316'
+  const d = data as Record<string, unknown> | undefined
+  const isCompatible = d?.isCompatible
+  const isParamUsage = d?.isParamUsage === true
+  // orange = return-type dataflow, purple = param-type usage, red = incompatible
+  const color = isCompatible === false ? '#ef4444' : isParamUsage ? '#a855f7' : '#f97316'
 
   return (
     <>
@@ -30,7 +33,7 @@ export function DataFlowEdgeComponent({
         fill="none"
         stroke={color}
         strokeWidth={2}
-        strokeDasharray="6 3"
+        strokeDasharray={isParamUsage ? undefined : '6 3'}
         markerEnd={markerEnd}
         className="react-flow__edge-path"
         style={{ cursor: 'pointer' }}
