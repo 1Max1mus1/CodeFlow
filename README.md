@@ -4,7 +4,7 @@
 
 **基于 AI 的 Python 代码库可视化工具，支持实时图谱编辑。**
 
-[English](#english) · [中文](#中文)
+[English](#english) · [中文](#中文) · [使用指南 / User Guide](GUIDE.md)
 
 ---
 
@@ -67,6 +67,8 @@ cd frontend && npm install && npm run dev
 ```
 
 Then enter the **absolute path** to any Python project in the sidebar and click **Load**. An example project is included at `example/TestProject/`.
+
+For a full feature walkthrough, see the **[User Guide →](GUIDE.md)**
 
 ### AI operations walkthrough
 
@@ -161,6 +163,8 @@ cd frontend && npm install && npm run dev
 ```
 
 打开页面后，在左侧边栏输入任意 Python 项目的**绝对路径**并点击 **Load**。仓库中包含示例项目 `example/TestProject/` 可直接体验。
+
+完整功能说明请参阅 **[使用指南 →](GUIDE.md)**
 
 ### AI 操作使用说明
 

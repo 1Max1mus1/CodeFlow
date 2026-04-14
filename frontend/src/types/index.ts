@@ -98,6 +98,12 @@ export interface EntryPoint {
   entryType: 'fastapi_route' | 'main_function' | 'cli_command'
 }
 
+export interface AppInstance {
+  varName: string
+  filePath: string
+  instanceType: 'fastapi' | 'apirouter'
+}
+
 export interface ParsedProject {
   id: string
   name: string
@@ -109,6 +115,7 @@ export interface ParsedProject {
   callEdges: CallEdge[]
   dataFlowEdges: DataFlowEdge[]
   entryPoints: EntryPoint[]
+  appInstances: AppInstance[]
 }
 
 export interface GraphView {
@@ -154,7 +161,7 @@ export interface FileDiff {
   changes: DiffChange[]
 }
 
-export type OperationType = 'replace' | 'delete' | 'add_insert' | 'add_branch' | 'add_api'
+export type OperationType = 'replace' | 'delete' | 'add_insert' | 'add_branch' | 'add_api' | 'generate_test'
 
 export type OperationStatus =
   | 'analyzing'

@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import type { AIQuestion } from '../../types'
 
+const CUSTOM_KEY = '__custom__'
+
 interface AIConversationProps {
   questions: AIQuestion[]
   onAnswer: (questionId: string, answer: string) => Promise<void>
@@ -15,19 +17,28 @@ export function AIConversation({ questions, onAnswer }: AIConversationProps) {
     })
     return init
   })
+  // Tracks which questions are in "custom input" mode
+  const [customMode, setCustomMode] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const unanswered = questions.filter((q) => q.userAnswer === null)
-  const allFilled = unanswered.every((q) => answers[q.id]?.trim())
+  const allFilled = unanswered.every((q) => {
+    const val = answers[q.id] ?? ''
+    if (val === CUSTOM_KEY) return (customMode[q.id] ?? '').trim().length > 0
+    return val.trim().length > 0
+  })
+
+  function getEffectiveAnswer(qId: string) {
+    const val = answers[qId] ?? ''
+    return val === CUSTOM_KEY ? (customMode[qId] ?? '').trim() : val.trim()
+  }
 
   async function handleGenerate() {
     if (!allFilled || isSubmitting) return
     setIsSubmitting(true)
     try {
-      // Submit answers one by one in order; each await lets the store update
-      // before the next call, avoiding stale closure issues
       for (const q of unanswered) {
-        await onAnswer(q.id, answers[q.id].trim())
+        await onAnswer(q.id, getEffectiveAnswer(q.id))
       }
     } finally {
       setIsSubmitting(false)
@@ -41,6 +52,7 @@ export function AIConversation({ questions, onAnswer }: AIConversationProps) {
         {questions.map((q, idx) => {
           const isAnswered = q.userAnswer !== null
           const currentVal = answers[q.id] ?? ''
+          const isCustom = currentVal === CUSTOM_KEY
 
           return (
             <div key={q.id} className="space-y-2">
@@ -62,7 +74,7 @@ export function AIConversation({ questions, onAnswer }: AIConversationProps) {
                   </span>
                 </div>
               ) : q.options ? (
-                /* Multiple-choice buttons */
+                /* Multiple-choice + custom option */
                 <div className="ml-7 flex flex-col gap-1.5">
                   {q.options.map((opt) => (
                     <button
@@ -79,6 +91,41 @@ export function AIConversation({ questions, onAnswer }: AIConversationProps) {
                       {opt}
                     </button>
                   ))}
+
+                  {/* Custom input option */}
+                  <button
+                    disabled={isSubmitting}
+                    onClick={() => setAnswers((prev) => ({ ...prev, [q.id]: CUSTOM_KEY }))}
+                    className={`text-left text-xs px-3 py-2 rounded border transition-all ${
+                      isCustom
+                        ? 'bg-purple-900/50 border-purple-500 text-white'
+                        : 'bg-gray-800 border-gray-600 border-dashed text-gray-400 hover:border-purple-500 hover:text-white'
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
+                  >
+                    {isCustom && <span className="mr-1.5 text-purple-300">●</span>}
+                    自定义输入…
+                  </button>
+
+                  {/* Inline text input when custom is selected */}
+                  {isCustom && (
+                    <input
+                      autoFocus
+                      type="text"
+                      value={customMode[q.id] ?? ''}
+                      disabled={isSubmitting}
+                      onChange={(e) =>
+                        setCustomMode((prev) => ({ ...prev, [q.id]: e.target.value }))
+                      }
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && allFilled) {
+                          e.preventDefault()
+                          handleGenerate()
+                        }
+                      }}
+                      placeholder="输入自定义内容…"
+                      className="w-full bg-gray-900 border border-purple-600 rounded px-3 py-2 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-purple-400 transition-colors disabled:opacity-50"
+                    />
+                  )}
                 </div>
               ) : (
                 /* Free-text textarea */

@@ -7,6 +7,8 @@ interface LeftSidebarProps {
   onSelectEntryPoint: (id: string) => void
   onLoadProject: (rootPath: string) => void
   onImportAPI: () => void
+  onGenerateTest: (functionId: string) => void
+  onRunRoute: (ep: EntryPoint) => void
   isLoading: boolean
   loadError: string | null
   hasSession: boolean
@@ -18,6 +20,8 @@ export function LeftSidebar({
   onSelectEntryPoint,
   onLoadProject,
   onImportAPI,
+  onGenerateTest,
+  onRunRoute,
   isLoading,
   loadError,
   hasSession,
@@ -64,17 +68,39 @@ export function LeftSidebar({
       </div>
       <div className="flex-1 overflow-y-auto py-2">
         {entryPoints.map((ep) => (
-          <button
+          <div
             key={ep.id}
-            onClick={() => onSelectEntryPoint(ep.id)}
-            className={`w-full text-left px-4 py-2 text-sm font-mono transition-colors ${
+            className={`group flex items-center gap-1 px-2 py-1.5 transition-colors ${
               activeEntryPointId === ep.id
-                ? 'bg-blue-900 text-blue-200'
-                : 'text-gray-300 hover:bg-gray-800'
+                ? 'bg-blue-900'
+                : 'hover:bg-gray-800'
             }`}
           >
-            {ep.label}
-          </button>
+            <button
+              onClick={() => onSelectEntryPoint(ep.id)}
+              className={`flex-1 text-left text-xs font-mono truncate ${
+                activeEntryPointId === ep.id ? 'text-blue-200' : 'text-gray-300'
+              }`}
+            >
+              {ep.label}
+            </button>
+            <button
+              onClick={() => hasSession && onRunRoute(ep)}
+              disabled={!hasSession}
+              title="Test this route in-app"
+              className="shrink-0 opacity-0 group-hover:opacity-100 px-1.5 py-0.5 rounded text-[10px] text-emerald-300 hover:bg-emerald-900/50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+            >
+              ▷
+            </button>
+            <button
+              onClick={() => hasSession && onGenerateTest(ep.functionId)}
+              disabled={!hasSession}
+              title="Generate pytest test for this route"
+              className="shrink-0 opacity-0 group-hover:opacity-100 px-1.5 py-0.5 rounded text-[10px] text-green-300 hover:bg-green-900/50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+            >
+              🧪
+            </button>
+          </div>
         ))}
         {entryPoints.length === 0 && (
           <p className="px-4 py-2 text-xs text-gray-500">No entry points detected.</p>

@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import type { Operation, ParsedProject } from '../../types'
+import type { EntryPoint, Operation, ParsedProject } from '../../types'
 import { AIConversation } from './AIConversation'
 import { DiffPreview } from './DiffPreview'
 import { IDEChatPanel } from '../ide/IDEChatPanel'
+import { RouteTestPanel } from './RouteTestPanel'
 
 interface RightPanelProps {
   operation: Operation | null
@@ -10,6 +11,7 @@ interface RightPanelProps {
   selectedNodeId: string | null
   project: ParsedProject | null
   sessionId: string | null
+  testEntryPoint: EntryPoint | null
   onAnswer: (questionId: string, answer: string) => Promise<void>
   onApply: () => void
   onRevert: () => void
@@ -22,7 +24,7 @@ interface RightPanelProps {
   onClearOperation: () => void
 }
 
-type ActiveTab = 'inspector' | 'assistant'
+type ActiveTab = 'inspector' | 'assistant' | 'tester'
 
 export function RightPanel({
   operation,
@@ -30,6 +32,7 @@ export function RightPanel({
   selectedNodeId,
   project,
   sessionId,
+  testEntryPoint,
   onAnswer,
   onApply,
   onRevert,
@@ -78,6 +81,11 @@ export function RightPanel({
   useEffect(() => {
     if (operation) setActiveTab('assistant')
   }, [operation?.id])
+
+  // ── Auto-switch to tester tab when a route is selected for testing ────────
+  useEffect(() => {
+    if (testEntryPoint) setActiveTab('tester')
+  }, [testEntryPoint?.id])
 
   // ── Auto-expand code when switching nodes ─────────────────────────────────
   useEffect(() => {
@@ -171,6 +179,19 @@ export function RightPanel({
             {operation && activeTab !== 'assistant' && (
               <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${opDotColor}`} />
             )}
+          </button>
+
+          {/* Route Tester tab */}
+          <button
+            onClick={() => setActiveTab('tester')}
+            className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold py-2 rounded-t transition-colors border-b-2 ${
+              activeTab === 'tester'
+                ? 'text-white border-emerald-500 bg-gray-800'
+                : 'text-gray-500 border-transparent hover:text-gray-300 hover:bg-gray-800/50'
+            }`}
+          >
+            <span>▷</span>
+            Tester
           </button>
         </div>
 
@@ -346,6 +367,11 @@ export function RightPanel({
               </div>
             )}
           </>
+        )}
+
+        {/* ════════════════ TESTER TAB ════════════════ */}
+        {activeTab === 'tester' && (
+          <RouteTestPanel entryPoint={testEntryPoint} project={project} />
         )}
 
         {/* ════════════════ AI ASSISTANT TAB ════════════════ */}

@@ -13,6 +13,7 @@ from src.services.parser.function_extractor import extract_functions
 from src.services.parser.schema_extractor import extract_schemas
 from src.services.parser.call_resolver import resolve_calls
 from src.services.parser.entry_point_detector import detect_entry_points
+from src.services.parser.app_detector import detect_app_instances
 
 
 def parse_project(root_path: str) -> ParsedProject:
@@ -29,11 +30,13 @@ def parse_project(root_path: str) -> ParsedProject:
 
     all_functions: list[FunctionNode] = []
     all_schemas: list[SchemaNode] = []
+    all_app_instances = []
 
     for abs_path in abs_file_paths:
         rel_path = os.path.relpath(abs_path, root_path).replace("\\", "/")
         all_functions.extend(extract_functions(abs_path, rel_path))
         all_schemas.extend(extract_schemas(abs_path, rel_path))
+        all_app_instances.extend(detect_app_instances(abs_path, rel_path))
 
     # Resolve cross-file call relationships
     all_functions, call_edges = resolve_calls(all_functions)
@@ -61,6 +64,7 @@ def parse_project(root_path: str) -> ParsedProject:
         call_edges=call_edges,
         data_flow_edges=data_flow_edges,
         entry_points=entry_points,
+        app_instances=all_app_instances,
     )
 
 

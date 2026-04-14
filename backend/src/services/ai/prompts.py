@@ -265,3 +265,54 @@ Here is the complete current content of `{source_file}`:
 
 Output ONLY the complete modified file content of `{source_file}` — no markdown code fences, no explanation, no commentary.
 """
+
+
+# ── Generate-test operation ───────────────────────────────────────────────────
+
+GENERATE_TEST_PROMPT = """\
+你是一个 Python 测试专家，熟悉 pytest 和 FastAPI TestClient。
+
+请根据以下信息，为指定的 FastAPI 路由函数生成一份完整的 pytest 测试文件。
+
+## 路由函数信息
+
+函数名: {fn_name}
+HTTP 方法 + 路径: {http_info}
+是否异步: {is_async}
+
+### 参数列表
+{params_detail}
+
+### 返回类型
+{return_type}
+
+### 函数源码
+```python
+{source_code}
+```
+
+## 关联 Schema 字段
+
+{schemas_detail}
+
+## FastAPI app 导入
+
+{app_import}
+
+## 测试场景要求
+
+{scenarios}
+
+## 生成规则
+
+1. 文件顶部导入: `from fastapi.testclient import TestClient`, `import pytest`, 以及其他必要模块
+2. 用 `@pytest.fixture` 创建 `client` fixture，基于上方提供的 app 导入语句
+3. 对每个检测到的 `Depends(...)` 参数，生成 `app.dependency_overrides[dep_func] = lambda: ...` 并添加注释 `# TODO: 替换为你的测试 mock`
+4. 根据 Schema 字段生成最小合法的测试请求体（必填字段给合理默认值，可选字段省略）
+5. 每个测试函数名格式: `test_{{fn_name}}_{{场景描述}}`, 附带简短 docstring
+6. 验证响应状态码和关键响应字段（基于返回类型的 Schema 字段）
+7. 成功路径断言: status_code 在 200-299 范围
+8. 错误路径断言: status_code 在 400-499 范围，并检查响应有 `detail` 字段
+
+只输出完整的 Python 文件内容，不要加 markdown 代码块标记，不要任何解释文字。
+"""

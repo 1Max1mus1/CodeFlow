@@ -93,6 +93,7 @@ const MOCK_PROJECT: ParsedProject = {
       entryType: 'fastapi_route',
     },
   ],
+  appInstances: [],
 }
 
 // ── computeGraphLayout ────────────────────────────────────────────────────────

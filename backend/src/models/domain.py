@@ -114,6 +114,12 @@ class EntryPoint(CamelModel):
     entry_type: Literal["fastapi_route", "main_function", "cli_command"]
 
 
+class AppInstance(CamelModel):
+    var_name: str            # "app" / "router"
+    file_path: str           # "main.py"
+    instance_type: Literal["fastapi", "apirouter"]
+
+
 class ParsedProject(CamelModel):
     id: str
     name: str
@@ -125,6 +131,7 @@ class ParsedProject(CamelModel):
     call_edges: list[CallEdge]
     data_flow_edges: list[DataFlowEdge]
     entry_points: list[EntryPoint]
+    app_instances: list[AppInstance] = []
 
 
 class GraphView(CamelModel):
@@ -178,7 +185,7 @@ class Operation(CamelModel):
     id: str
     session_id: str
     project_id: str          # stored directly so diff generation doesn't need the session
-    type: Literal["replace", "delete", "add_insert", "add_branch", "add_api"]
+    type: Literal["replace", "delete", "add_insert", "add_branch", "add_api", "generate_test"]
     target_node_id: str
     new_node_id: str | None
     status: Literal[
@@ -224,7 +231,7 @@ class UpdateNodePositionRequest(CamelModel):
 
 class SubmitOperationRequest(CamelModel):
     session_id: str
-    operation_type: Literal["replace", "delete", "add_insert", "add_branch", "add_api"]
+    operation_type: Literal["replace", "delete", "add_insert", "add_branch", "add_api", "generate_test"]
     target_node_id: str
     new_node_id: str | None
 

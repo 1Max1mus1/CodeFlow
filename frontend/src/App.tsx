@@ -34,7 +34,7 @@ import { useSession } from './hooks/useSession'
 import { useAppStore } from './store'
 import { projectToFlow } from './utils/projectToFlow'
 import { addExternalAPI } from './services/api'
-import type { FieldInfo, Operation } from './types'
+import type { EntryPoint, FieldInfo, Operation } from './types'
 
 // ── Register custom node & edge types ────────────────────────────────────────
 
@@ -77,6 +77,7 @@ export default function App() {
   const [deleteConfirmNodeId, setDeleteConfirmNodeId] = useState<string | null>(null)
   const [rollbackConfirmOp, setRollbackConfirmOp] = useState<Operation | null>(null)
   const [showImportAPIModal, setShowImportAPIModal] = useState(false)
+  const [testEntryPoint, setTestEntryPoint] = useState<EntryPoint | null>(null)
 
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{
@@ -281,12 +282,25 @@ export default function App() {
     }
   }
 
+  async function handleGenerateTest(functionId: string) {
+    if (!session) return
+    try {
+      await startOperation(session.id, 'generate_test', functionId, null)
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : 'Failed to start generate-test operation')
+    }
+  }
+
   // After apply: re-parse the project from disk so the graph reflects AI-written changes.
   // This removes deleted nodes, updates modified functions, etc.
   async function handleApply() {
-    await apply()
-    if (!project) return
+    const { setOperationError } = useAppStore.getState()
     try {
+      const result = await apply()
+      // generate_test writes a test file — it doesn't change project structure,
+      // so skip re-parse + session rebuild (avoids silent failures from scanning test files).
+      if (result?.operation?.type === 'generate_test') return
+      if (!project) return
       const newProject = await loadProject(project.rootPath)
       // Keep the same entry point if it still exists, otherwise fall back to first
       const epId =
@@ -297,7 +311,9 @@ export default function App() {
         await startSession(newProject.id, epId)
       }
     } catch (err) {
-      setLoadError(err instanceof Error ? err.message : 'Failed to reload project after apply')
+      const msg = err instanceof Error ? err.message : 'Failed to apply changes'
+      setOperationError(msg)   // shows prominently in RightPanel AI tab
+      setLoadError(msg)        // also show in sidebar as fallback
     }
   }
 
@@ -456,6 +472,8 @@ export default function App() {
           onSelectEntryPoint={handleSelectEntryPoint}
           onLoadProject={handleLoadProject}
           onImportAPI={() => setShowImportAPIModal(true)}
+          onGenerateTest={handleGenerateTest}
+          onRunRoute={(ep: EntryPoint) => setTestEntryPoint(ep)}
           isLoading={isLoading}
           loadError={loadError}
           hasSession={session != null}
@@ -668,6 +686,7 @@ export default function App() {
               selectedNodeId={selectedNodeId}
               project={project ?? null}
               sessionId={session?.id ?? null}
+              testEntryPoint={testEntryPoint}
               onAnswer={async (qId, answer) => { await sendAnswer(qId, answer) }}
               onApply={handleApply}
               onRevert={() => revert()}

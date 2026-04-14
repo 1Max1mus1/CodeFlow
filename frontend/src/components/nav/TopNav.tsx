@@ -21,6 +21,7 @@ const OP_ICON: Record<string, string> = {
   add_insert: '⊕',
   add_branch: '⤵',
   add_api: '🔗',
+  generate_test: '🧪',
 }
 
 export function TopNav({ projectName, activeView, onViewChange, operationHistory, onRollbackClick }: TopNavProps) {

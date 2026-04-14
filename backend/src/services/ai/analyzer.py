@@ -36,6 +36,8 @@ async def analyze_operation(
         return _analyze_add_insert(operation, project)
     if operation.type == "add_branch":
         return _analyze_add_branch(operation, project)
+    if operation.type == "generate_test":
+        return _analyze_generate_test(operation, project)
     # Other operation types handled in later phases
     return operation.model_copy(update={"status": "awaiting_user", "ai_questions": []})
 
@@ -286,4 +288,50 @@ def _analyze_add_branch(operation: Operation, project: ParsedProject) -> Operati
 
     return operation.model_copy(
         update={"status": "awaiting_user", "ai_questions": [q_condition, q_behavior, q_file]}
+    )
+
+
+# ── Generate-test analysis ────────────────────────────────────────────────────
+
+def _analyze_generate_test(operation: Operation, project: ParsedProject) -> Operation:
+    """Ask the user for test scenario and output file path."""
+    fn_by_id = {fn.id: fn for fn in project.functions}
+    target_fn = fn_by_id.get(operation.target_node_id)
+
+    if target_fn is None:
+        question = AIQuestion(
+            id="q-error",
+            question=(
+                f"Function '{operation.target_node_id}' not found. "
+                "Please reload the project and try again."
+            ),
+            options=["Cancel"],
+            user_answer=None,
+        )
+        return operation.model_copy(
+            update={"status": "awaiting_user", "ai_questions": [question]}
+        )
+
+    # Default test file path: tests/test_<source_filename>.py
+    source_stem = target_fn.file_path.replace("\\", "/").split("/")[-1].replace(".py", "")
+    default_test_path = f"tests/test_{source_stem}.py"
+
+    q_scenario = AIQuestion(
+        id="q-scenario",
+        question=(
+            f"为 `{target_fn.name}` 生成哪些测试场景？"
+        ),
+        options=["仅成功路径 (2xx)", "仅错误路径 (4xx/5xx)", "成功 + 错误路径（推荐）"],
+        user_answer=None,
+    )
+
+    q_filepath = AIQuestion(
+        id="q-filepath",
+        question="测试文件保存到哪里？（直接输入路径或使用默认值）",
+        options=[default_test_path],
+        user_answer=None,
+    )
+
+    return operation.model_copy(
+        update={"status": "awaiting_user", "ai_questions": [q_scenario, q_filepath]}
     )

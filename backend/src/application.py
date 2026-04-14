@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from src.routers import project, session, operation
+from src.routers import project, session, operation, proxy
 
 
 def create_app() -> FastAPI:
@@ -12,7 +12,7 @@ def create_app() -> FastAPI:
 
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["http://localhost:5173"],
+        allow_origins=["*"],
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -21,5 +21,6 @@ def create_app() -> FastAPI:
     app.include_router(project.router, prefix="/project", tags=["Project"])
     app.include_router(session.router, prefix="/session", tags=["Session"])
     app.include_router(operation.router, prefix="/operation", tags=["Operation"])
+    app.include_router(proxy.router, prefix="/proxy", tags=["Proxy"])
 
     return app

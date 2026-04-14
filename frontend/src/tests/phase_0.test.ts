@@ -127,6 +127,7 @@ describe('Phase 0 — TypeScript type contracts', () => {
       callEdges: [],
       dataFlowEdges: [],
       entryPoints: [],
+      appInstances: [],
     }
     expect(project.language).toBe('python')
     expect(Array.isArray(project.functions)).toBe(true)

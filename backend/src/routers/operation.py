@@ -1,6 +1,9 @@
 import os
+import json
 import uuid
+import traceback
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import JSONResponse
 from src.models.domain import (
     SubmitOperationRequest,
     SubmitOperationResponse,
@@ -108,9 +111,20 @@ async def answer_question(
     return AnswerQuestionResponse(operation=ready_op)
 
 
-@router.post("/{operation_id}/apply", response_model=ApplyOperationResponse)
-async def apply_operation(operation_id: str) -> ApplyOperationResponse:
+@router.post("/{operation_id}/apply")
+async def apply_operation(operation_id: str):
     """Write generated diffs to disk."""
+    try:
+        result = await _do_apply(operation_id)
+        return JSONResponse(content=json.loads(json.dumps(result, default=str)))
+    except HTTPException:
+        raise
+    except Exception as exc:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"[{type(exc).__name__}] {exc}") from exc
+
+
+async def _do_apply(operation_id: str):
     op = store.get_operation(operation_id)
     if op is None:
         raise HTTPException(status_code=404, detail=f"Operation {operation_id!r} not found")
@@ -124,7 +138,7 @@ async def apply_operation(operation_id: str) -> ApplyOperationResponse:
     if not op.generated_diffs:
         applied_op = op.model_copy(update={"status": "applied"})
         store.save_operation(applied_op)
-        return ApplyOperationResponse(operation=applied_op, modified_files=[])
+        return ApplyOperationResponse(operation=applied_op, modified_files=[]).model_dump(by_alias=True)
 
     # Look up project directly via project_id (no session needed)
     project = store.get_project(op.project_id)
@@ -137,14 +151,16 @@ async def apply_operation(operation_id: str) -> ApplyOperationResponse:
     modified_files: list[str] = []
     for diff in op.generated_diffs:
         abs_path = os.path.join(project.root_path, diff.file_path)
+        parent_dir = os.path.dirname(abs_path)
+        if parent_dir:
+            os.makedirs(parent_dir, exist_ok=True)
         with open(abs_path, "w", encoding="utf-8") as fh:
             fh.write(diff.new_content)
         modified_files.append(diff.file_path)
 
     applied_op = op.model_copy(update={"status": "applied"})
     store.save_operation(applied_op)
-
-    return ApplyOperationResponse(operation=applied_op, modified_files=modified_files)
+    return ApplyOperationResponse(operation=applied_op, modified_files=modified_files).model_dump(by_alias=True)
 
 
 @router.post("/{operation_id}/revert", response_model=Operation)
