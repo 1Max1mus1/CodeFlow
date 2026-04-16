@@ -116,6 +116,7 @@ export interface ParsedProject {
   dataFlowEdges: DataFlowEdge[]
   entryPoints: EntryPoint[]
   appInstances: AppInstance[]
+  suggestedPort: number | null
 }
 
 export interface GraphView {

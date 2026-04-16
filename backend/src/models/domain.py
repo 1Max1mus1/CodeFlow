@@ -132,6 +132,7 @@ class ParsedProject(CamelModel):
     data_flow_edges: list[DataFlowEdge]
     entry_points: list[EntryPoint]
     app_instances: list[AppInstance] = []
+    suggested_port: int | None = None
 
 
 class GraphView(CamelModel):

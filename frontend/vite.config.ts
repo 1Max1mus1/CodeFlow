@@ -6,10 +6,10 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/project': 'http://localhost:8002',
-      '/session': 'http://localhost:8002',
-      '/operation': 'http://localhost:8002',
-      '/proxy': 'http://localhost:8002',
+      '/project': 'http://localhost:8000',
+      '/session': 'http://localhost:8000',
+      '/operation': 'http://localhost:8000',
+      '/proxy': 'http://localhost:8000',
     },
   },
   test: {
