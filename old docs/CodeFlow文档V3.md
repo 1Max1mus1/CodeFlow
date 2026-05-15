@@ -1879,8 +1879,8 @@ async def _adapt_mineru_to_magic_pdf_format(
     "AI集成": {
         "LLM框架": "LangChain",
         "向量数据库": "Chroma (嵌入式)",
-        "Embedding": "OpenAI text-embedding-3-small",
-        "LLM": "Anthropic Claude Sonnet 4 / OpenAI GPT-4"
+        "Embedding": "MiMo embedding model",
+        "LLM": "MiMo Token Plan China / Anthropic-compatible model"
     },
     "图处理": "NetworkX",
     "Git集成": "gitpython",

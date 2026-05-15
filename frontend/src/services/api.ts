@@ -97,6 +97,66 @@ export function chatWithAI(
   })
 }
 
+export async function chatWithAIStream(
+  sessionId: string,
+  message: string,
+  contextNodeId: string | null,
+  history: Array<{ role: 'user' | 'assistant'; content: string }>,
+  onToken: (token: string) => void,
+): Promise<void> {
+  const res = await fetch(`${BASE_URL}/session/${sessionId}/chat/stream`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      message,
+      context_node_id: contextNodeId,
+      history,
+    }),
+  })
+
+  if (!res.ok) {
+    const detail = await res.text()
+    throw new Error(`POST /session/${sessionId}/chat/stream -> ${res.status}: ${detail}`)
+  }
+  if (!res.body) {
+    throw new Error('Streaming response body is empty')
+  }
+
+  const reader = res.body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    buffer += decoder.decode(value, { stream: true })
+
+    const events = buffer.split('\n\n')
+    buffer = events.pop() ?? ''
+    for (const eventText of events) {
+      handleSSEEvent(eventText, onToken)
+    }
+  }
+
+  if (buffer.trim()) {
+    handleSSEEvent(buffer, onToken)
+  }
+}
+
+function handleSSEEvent(raw: string, onToken: (token: string) => void) {
+  const eventLine = raw.split('\n').find((line) => line.startsWith('event:'))
+  const dataLine = raw.split('\n').find((line) => line.startsWith('data:'))
+  if (!eventLine || !dataLine) return
+
+  const event = eventLine.slice('event:'.length).trim()
+  const data = JSON.parse(dataLine.slice('data:'.length).trim()) as Record<string, unknown>
+  if (event === 'token') {
+    onToken(String(data.text ?? ''))
+  } else if (event === 'error') {
+    throw new Error(String(data.message ?? 'AI stream failed'))
+  }
+}
+
 export function addExternalAPI(
   sessionId: string,
   params: {

@@ -1,7 +1,6 @@
-"""Phase 4+: Generate FileDiff list from answered AIQuestions using Kimi (Moonshot)."""
+"""Phase 4+: Generate FileDiff list from answered AIQuestions using MiMo Token Plan CN."""
 import difflib
 import os
-from openai import AsyncOpenAI
 from src.models.domain import Operation, ParsedProject, FileDiff, DiffChange
 from src.services.ai.prompts import (
     DELETE_GENERATION_PROMPT,
@@ -14,23 +13,18 @@ from src.services.ai.prompts import (
     ADD_BRANCH_IMPORT_PROMPT,
     GENERATE_TEST_PROMPT,
 )
+from src.services.ai.mimo import MIMO_MODEL, MimoTokenPlanClient, make_mimo_client
 from src.settings import SETTINGS
 
-MOONSHOT_BASE_URL = "https://api.moonshot.cn/v1"
-MOONSHOT_MODEL = "moonshot-v1-32k"
 
-
-def _make_client() -> AsyncOpenAI:
-    return AsyncOpenAI(
-        api_key=SETTINGS.moonshot_api_key,
-        base_url=MOONSHOT_BASE_URL,
-    )
+def _make_client() -> MimoTokenPlanClient:
+    return make_mimo_client()
 
 
 async def generate_diffs(
     operation: Operation, project: ParsedProject
 ) -> Operation:
-    """Call Kimi (Moonshot) API with answered questions to generate code diffs.
+    """Call MiMo Token Plan China with answered questions to generate code diffs.
 
     Returns:
         Operation updated with generated_diffs and status='ready'.
@@ -95,7 +89,7 @@ async def _generate_delete_diffs(
                 user_instruction=user_answer,
             )
             response = await client.chat.completions.create(
-                model=MOONSHOT_MODEL,
+                model=SETTINGS.mimo_model or MIMO_MODEL,
                 max_tokens=8192,
                 messages=[{"role": "user", "content": prompt}],
             )
@@ -216,7 +210,7 @@ async def _generate_replace_diffs(
         )
 
         response = await client.chat.completions.create(
-            model=MOONSHOT_MODEL,
+            model=SETTINGS.mimo_model or MIMO_MODEL,
             max_tokens=8192,
             messages=[{"role": "user", "content": prompt}],
         )
@@ -285,7 +279,7 @@ async def _generate_add_insert_diffs(
             file_content=source_old_content,
         )
         response = await client.chat.completions.create(
-            model=MOONSHOT_MODEL,
+            model=SETTINGS.mimo_model or MIMO_MODEL,
             max_tokens=8192,
             messages=[{"role": "user", "content": prompt}],
         )
@@ -317,7 +311,7 @@ async def _generate_add_insert_diffs(
             file_content=chosen_old_content,
         )
         response1 = await client.chat.completions.create(
-            model=MOONSHOT_MODEL,
+            model=SETTINGS.mimo_model or MIMO_MODEL,
             max_tokens=8192,
             messages=[{"role": "user", "content": prompt1}],
         )
@@ -339,7 +333,7 @@ async def _generate_add_insert_diffs(
             source_file_content=source_old_content,
         )
         response2 = await client.chat.completions.create(
-            model=MOONSHOT_MODEL,
+            model=SETTINGS.mimo_model or MIMO_MODEL,
             max_tokens=8192,
             messages=[{"role": "user", "content": prompt2}],
         )
@@ -406,7 +400,7 @@ async def _generate_add_branch_diffs(
             function_description=function_description,
         )
         response = await client.chat.completions.create(
-            model=MOONSHOT_MODEL,
+            model=SETTINGS.mimo_model or MIMO_MODEL,
             max_tokens=8192,
             messages=[{"role": "user", "content": prompt}],
         )
@@ -435,7 +429,7 @@ async def _generate_add_branch_diffs(
             file_content=chosen_old_content,
         )
         response1 = await client.chat.completions.create(
-            model=MOONSHOT_MODEL,
+            model=SETTINGS.mimo_model or MIMO_MODEL,
             max_tokens=8192,
             messages=[{"role": "user", "content": prompt1}],
         )
@@ -457,7 +451,7 @@ async def _generate_add_branch_diffs(
             caller_file_content=target_old_content,
         )
         response2 = await client.chat.completions.create(
-            model=MOONSHOT_MODEL,
+            model=SETTINGS.mimo_model or MIMO_MODEL,
             max_tokens=8192,
             messages=[{"role": "user", "content": prompt2}],
         )
@@ -495,7 +489,7 @@ async def _generate_test_diffs(
 
     # Read answers
     answers = {q.id: (q.user_answer or "") for q in operation.ai_questions}
-    scenario = answers.get("q-scenario", "成功 + 错误路径（推荐）")
+    scenario = answers.get("q-scenario", "success + error paths (recommended)")
     test_file_path = answers.get("q-filepath", "").strip()
     if not test_file_path:
         source_stem = target_fn.file_path.replace("\\", "/").split("/")[-1].replace(".py", "")
@@ -507,7 +501,7 @@ async def _generate_test_diffs(
         default = f" = {p.default}" if p.default else ""
         optional = " (optional)" if p.is_optional else ""
         params_lines.append(f"  {p.name}: {p.type or 'Any'}{default}{optional}")
-    params_detail = "\n".join(params_lines) if params_lines else "  （无参数）"
+    params_detail = "\n".join(params_lines) if params_lines else "  (no parameters)"
 
     # Build schemas detail
     used_schemas = [schema_by_id[sid] for sid in target_fn.uses_schemas if sid in schema_by_id]
@@ -521,7 +515,7 @@ async def _generate_test_diffs(
             schema_lines.append(f"  {s.name}: {fields_str}")
         schemas_detail = "\n".join(schema_lines)
     else:
-        schemas_detail = "  （无关联 Schema）"
+        schemas_detail = "  (no related schemas)"
 
     # Resolve FastAPI app import — prefer a `fastapi` instance; fallback to apirouter
     app_instance = next(
@@ -536,7 +530,7 @@ async def _generate_test_diffs(
         )
     else:
         app_import = (
-            "from main import app  # TODO: 调整为实际的 app 导入路径\n"
+            "from main import app  # TODO: adjust to the actual app import path\n"
             "client = TestClient(app)"
         )
 
@@ -547,7 +541,7 @@ async def _generate_test_diffs(
     prompt = GENERATE_TEST_PROMPT.format(
         fn_name=target_fn.name,
         http_info=http_info,
-        is_async="是" if target_fn.is_async else "否",
+        is_async="yes" if target_fn.is_async else "no",
         params_detail=params_detail,
         return_type=target_fn.return_type or "Any",
         source_code=target_fn.source_code,
@@ -558,7 +552,7 @@ async def _generate_test_diffs(
 
     client = _make_client()
     response = await client.chat.completions.create(
-        model=MOONSHOT_MODEL,
+        model=SETTINGS.mimo_model or MIMO_MODEL,
         max_tokens=8192,
         messages=[{"role": "user", "content": prompt}],
         temperature=0.2,
@@ -599,7 +593,7 @@ def _file_path_to_module(rel_path: str) -> str:
 
 
 def _strip_markdown_fences(text: str) -> str:
-    """Remove accidental ```python ... ``` wrapping Claude sometimes adds."""
+    """Remove accidental ```python ... ``` wrapping that models sometimes add."""
     if text.startswith("```"):
         lines = text.splitlines()
         end = len(lines) - 1 if lines[-1].strip() == "```" else len(lines)

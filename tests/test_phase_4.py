@@ -3,7 +3,8 @@ Phase 4 test — verifies delete operation: AI question generation, diff creatio
 Run from project root: pytest tests/test_phase_4.py
 Uses example/task-api as the test project.
 
-Tests that call Claude require ANTHROPIC_API_KEY to be set.
+Tests that call MiMo Token Plan CN require XIAOMI_TOKEN_PLAN_CN_API_KEY
+or ANTHROPIC_AUTH_TOKEN to be set.
 Tests that only verify the analysis step (question generation) run without it.
 """
 import os
@@ -24,10 +25,13 @@ TASK_API_PATH = os.path.normpath(
     os.path.join(os.path.dirname(__file__), "..", "example", "task-api", "src")
 )
 
-HAS_MOONSHOT_KEY = bool(os.environ.get("MOONSHOT_API_KEY"))
-needs_claude = pytest.mark.skipif(
-    not HAS_MOONSHOT_KEY,
-    reason="MOONSHOT_API_KEY not set — skipping AI-dependent test",
+HAS_MIMO_KEY = bool(
+    os.environ.get("XIAOMI_TOKEN_PLAN_CN_API_KEY")
+    or os.environ.get("ANTHROPIC_AUTH_TOKEN")
+)
+needs_ai = pytest.mark.skipif(
+    not HAS_MIMO_KEY,
+    reason="XIAOMI_TOKEN_PLAN_CN_API_KEY not set — skipping AI-dependent test",
 )
 
 
@@ -163,7 +167,7 @@ async def test_submit_unknown_session_returns_404(client, parsed_project):
     assert resp.status_code == 404
 
 
-# ── Answer question (no Claude) ───────────────────────────────────────────────
+# ── Answer question (no AI) ───────────────────────────────────────────────────
 
 async def test_answer_question_stores_answer(client, delete_op):
     op_id = delete_op["id"]
@@ -172,7 +176,7 @@ async def test_answer_question_stores_answer(client, delete_op):
     resp = await client.post(f"/operation/{op_id}/answer", json={
         "operation_id": op_id,
         "question_id": q_id,
-        "answer": "I will handle this manually",  # produces no diffs; no Claude needed
+        "answer": "I will handle this manually",  # produces no diffs; no AI needed
     })
     assert resp.status_code == 200
 
@@ -182,7 +186,7 @@ async def test_answer_question_stores_answer(client, delete_op):
 
 
 async def test_answer_manually_reaches_ready(client, delete_op):
-    """'I will handle this manually' skips Claude and goes directly to ready."""
+    """'I will handle this manually' skips AI and goes directly to ready."""
     op_id = delete_op["id"]
     q_id = delete_op["aiQuestions"][0]["id"]
 
@@ -196,7 +200,7 @@ async def test_answer_manually_reaches_ready(client, delete_op):
     assert data.operation.generated_diffs is not None  # may be empty list
 
 
-# ── Revert (no Claude) ────────────────────────────────────────────────────────
+# ── Revert (no AI) ────────────────────────────────────────────────────────────
 
 async def test_revert_sets_reverted_status(client, delete_op):
     op_id = delete_op["id"]
@@ -206,9 +210,9 @@ async def test_revert_sets_reverted_status(client, delete_op):
     assert data.status == "reverted"
 
 
-# ── Claude-dependent: real diff generation ────────────────────────────────────
+# ── AI-dependent: real diff generation ────────────────────────────────────────
 
-@needs_claude
+@needs_ai
 async def test_answer_with_skip_reaches_ready_with_diffs(client, session_data,
                                                           upload_to_blob_id, parsed_project):
     """End-to-end: submit delete → answer 'skip calls' → status ready with diffs."""
@@ -236,7 +240,7 @@ async def test_answer_with_skip_reaches_ready_with_diffs(client, session_data,
     assert len(data.operation.generated_diffs) >= 1
 
 
-@needs_claude
+@needs_ai
 async def test_apply_writes_file_to_disk(client, session_data, upload_to_blob_id,
                                          parsed_project, tmp_path):
     """Apply writes modified files to disk. Uses a temp copy of task-api to avoid corruption."""

@@ -36,7 +36,7 @@ CodeFlow parses your Python project into an interactive call-graph, lets you exp
 **Backend**
 - Python 3.11+ · FastAPI · Uvicorn
 - `astroid` — Python AST analysis and call-graph extraction
-- `openai` SDK → Moonshot (Kimi) `moonshot-v1-32k` model for code generation
+- `httpx` client → MiMo Token Plan China Anthropic Messages API (`mimo-v2.5-pro`) for code generation
 - `pydantic-settings` — typed config, reads `.env` automatically
 - `pytest` + `pytest-asyncio` — phase-by-phase integration tests
 
@@ -50,7 +50,7 @@ CodeFlow parses your Python project into an interactive call-graph, lets you exp
 
 ### Getting started
 
-**Prerequisites:** Python 3.11+, Node.js 18+, a [Moonshot API key](https://platform.moonshot.cn/)
+**Prerequisites:** Python 3.11+, Node.js 18+, a MiMo Token Plan China key from https://platform.xiaomimimo.com/token-plan
 
 ```bash
 # 1. Clone
@@ -58,7 +58,7 @@ git clone https://github.com/1Max1mus1/CodeFlow.git && cd CodeFlow
 
 # 2. Backend
 cd backend && pip install -r requirements.txt
-cp .env.example .env          # add your MOONSHOT_API_KEY
+cp .env.example .env          # add your XIAOMI_TOKEN_PLAN_CN_API_KEY
 python -m uvicorn src.main:app --host 0.0.0.0 --port 8000
 
 # 3. Frontend (new terminal)
@@ -100,7 +100,10 @@ pytest tests/ -v
 
 | Variable | Description |
 |---|---|
-| `MOONSHOT_API_KEY` | Moonshot (Kimi) API key — required for all AI operations |
+| `XIAOMI_TOKEN_PLAN_CN_API_KEY` | MiMo Token Plan China auth token (`tp-...`) — required for all AI operations |
+| `MIMO_TOKEN_PLAN_CN_BASE_URL` | Anthropic-compatible Token Plan China endpoint, defaults to `https://token-plan-cn.xiaomimimo.com/anthropic` |
+| `MIMO_MODEL` | MiMo model id, defaults to `mimo-v2.5-pro` |
+| `MIMO_API_TIMEOUT_SECONDS` | AI request timeout, defaults to `120` seconds |
 
 ---
 
@@ -132,7 +135,7 @@ CodeFlow 将你的 Python 项目解析为交互式函数调用图，让你直观
 **后端**
 - Python 3.11+ · FastAPI · Uvicorn
 - `astroid` — Python AST 分析与调用图提取
-- `openai` SDK → Moonshot（Kimi）`moonshot-v1-32k` 模型生成代码
+- `httpx` client → MiMo Token Plan China Anthropic Messages API (`mimo-v2.5-pro`) 模型生成代码
 - `pydantic-settings` — 类型化配置，自动读取 `.env`
 - `pytest` + `pytest-asyncio` — 按阶段划分的集成测试
 
@@ -146,7 +149,7 @@ CodeFlow 将你的 Python 项目解析为交互式函数调用图，让你直观
 
 ### 快速开始
 
-**前置条件：** Python 3.11+、Node.js 18+、[Moonshot API Key](https://platform.moonshot.cn/)
+**前置条件：** Python 3.11+、Node.js 18+、MiMo Token Plan China Key：https://platform.xiaomimimo.com/token-plan
 
 ```bash
 # 1. 克隆仓库
@@ -154,7 +157,7 @@ git clone https://github.com/1Max1mus1/CodeFlow.git && cd CodeFlow
 
 # 2. 启动后端
 cd backend && pip install -r requirements.txt
-cp .env.example .env          # 填入你的 MOONSHOT_API_KEY
+cp .env.example .env          # 填入你的 XIAOMI_TOKEN_PLAN_CN_API_KEY
 python -m uvicorn src.main:app --host 0.0.0.0 --port 8000
 
 # 3. 启动前端（新终端）
@@ -190,7 +193,7 @@ CodeFlow/
 │   │       ├── session/          # 内存存储
 │   │       └── ai/
 │   │           ├── analyzer.py   # 程序化问题生成
-│   │           ├── generator.py  # Moonshot API → FileDiff 生成
+│   │           ├── generator.py  # MiMo Token Plan CN → FileDiff 生成
 │   │           └── prompts.py    # 所有 LLM Prompt 模板
 │   ├── requirements.txt
 │   └── .env.example
@@ -227,7 +230,10 @@ pytest tests/ -v
 
 | 变量 | 说明 |
 |---|---|
-| `MOONSHOT_API_KEY` | Moonshot（Kimi）API Key，所有 AI 操作必填 |
+| `XIAOMI_TOKEN_PLAN_CN_API_KEY` | MiMo Token Plan China auth token (`tp-...`)，所有 AI 操作必填 |
+| `MIMO_TOKEN_PLAN_CN_BASE_URL` | Anthropic-compatible Token Plan China endpoint，默认 `https://token-plan-cn.xiaomimimo.com/anthropic` |
+| `MIMO_MODEL` | MiMo 模型 ID，默认 `mimo-v2.5-pro` |
+| `MIMO_API_TIMEOUT_SECONDS` | AI 请求超时秒数，默认 `120` |
 
 ---
 

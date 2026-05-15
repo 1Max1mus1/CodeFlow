@@ -25,7 +25,7 @@
       Q2: 测试文件路径（默认 tests/test_{source}.py）
   → status: awaiting_user → 前端展示问题
   → 用户回答 → POST /operation/{id}/answer
-  → generator._generate_test_diffs()        # 调用 Moonshot AI 生成代码
+  → generator._generate_test_diffs()        # 调用 MiMo Token Plan CN AI 生成代码
       - 构建 prompt：函数签名 + schema 字段 + 路由路径 + HTTP 方法
       - AI 输出完整测试文件内容
       - 写入新文件 diff（old_content="" → new_content=生成内容）
@@ -182,7 +182,7 @@ async def _generate_test_diffs(operation, project) -> Operation:
 
     client = _make_client()
     resp = await client.chat.completions.create(
-        model=MOONSHOT_MODEL,
+        model=SETTINGS.mimo_model or MIMO_MODEL,
         messages=[{"role": "user", "content": prompt}],
         temperature=0.2,
     )

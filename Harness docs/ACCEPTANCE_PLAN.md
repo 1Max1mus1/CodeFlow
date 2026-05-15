@@ -173,7 +173,7 @@ For each scenario, perform the steps, then report back one of:
 | 8 | Revert Operation | |
 
 **Pass threshold:** 7/8 scenarios PASS or PARTIAL  
-**AI scenarios** (5, 6 full diff, 7 full diff): require `MOONSHOT_API_KEY` in `backend/.env`
+**AI scenarios** (5, 6 full diff, 7 full diff): require `XIAOMI_TOKEN_PLAN_CN_API_KEY` in `backend/.env`
 
 ---
 

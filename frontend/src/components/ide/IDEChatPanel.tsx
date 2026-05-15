@@ -1,5 +1,6 @@
-import { useState, useRef, useEffect } from 'react'
-import { chatWithAI } from '../../services/api'
+import { useEffect, useRef, useState } from 'react'
+import { chatWithAIStream } from '../../services/api'
+import { MarkdownMessage } from './MarkdownMessage'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -29,19 +30,38 @@ export function IDEChatPanel({ sessionId, contextNodeId, contextNodeName }: IDEC
 
     const userMsg: Message = { role: 'user', content: text }
     const next = [...messages, userMsg]
-    setMessages(next)
+    const assistantIndex = next.length
+    setMessages([...next, { role: 'assistant', content: '' }])
     setInput('')
     setIsLoading(true)
 
     try {
-      const result = await chatWithAI(sessionId, text, contextNodeId, messages)
-      setMessages([...next, { role: 'assistant', content: result.response }])
+      await chatWithAIStream(sessionId, text, contextNodeId, messages, (token) => {
+        setMessages((current) => {
+          const updated = [...current]
+          const assistant = updated[assistantIndex]
+          if (!assistant || assistant.role !== 'assistant') return current
+          updated[assistantIndex] = {
+            ...assistant,
+            content: assistant.content + token,
+          }
+          return updated
+        })
+      })
     } catch (err) {
       const raw = err instanceof Error ? err.message : 'Unknown error'
       const display = raw.includes('404')
-        ? 'Session not found — the backend may have restarted. Please enter your project path in the sidebar and click Load to start a new session.'
+        ? 'Session not found. The backend may have restarted. Please reload your project and start a new session.'
         : `Error: ${raw}`
-      setMessages([...next, { role: 'assistant', content: display }])
+      setMessages((current) => {
+        const updated = [...current]
+        const lastIndex = updated.length - 1
+        if (updated[lastIndex]?.role === 'assistant') {
+          updated[lastIndex] = { role: 'assistant', content: display }
+          return updated
+        }
+        return [...next, { role: 'assistant', content: display }]
+      })
     } finally {
       setIsLoading(false)
     }
@@ -56,14 +76,12 @@ export function IDEChatPanel({ sessionId, contextNodeId, contextNodeName }: IDEC
 
   return (
     <div className="flex flex-col h-full">
-      {/* Context indicator */}
       {contextNodeName && (
         <div className="px-3 py-1.5 border-b border-gray-700 bg-gray-850 text-xs text-blue-400 font-mono shrink-0">
           Context: {contextNodeName}()
         </div>
       )}
 
-      {/* Messages */}
       <div className="flex-1 overflow-y-auto p-3 space-y-3">
         {messages.length === 0 && (
           <div className="text-xs text-gray-600 leading-relaxed">
@@ -88,29 +106,28 @@ export function IDEChatPanel({ sessionId, contextNodeId, contextNodeName }: IDEC
         {messages.map((msg, i) => (
           <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div
-              className={`max-w-[90%] rounded-lg px-3 py-2 text-xs leading-relaxed whitespace-pre-wrap ${
+              className={`max-w-[90%] rounded-lg px-3 py-2 text-xs leading-relaxed ${
                 msg.role === 'user'
-                  ? 'bg-blue-700 text-white rounded-br-none'
+                  ? 'bg-blue-700 text-white rounded-br-none whitespace-pre-wrap'
                   : 'bg-gray-800 text-gray-200 rounded-bl-none'
               }`}
             >
-              {msg.content}
+              {msg.role === 'assistant' ? (
+                msg.content ? (
+                  <MarkdownMessage content={msg.content} />
+                ) : (
+                  <span className="animate-pulse text-gray-400">Thinking...</span>
+                )
+              ) : (
+                msg.content
+              )}
             </div>
           </div>
         ))}
 
-        {isLoading && (
-          <div className="flex justify-start">
-            <div className="bg-gray-800 rounded-lg rounded-bl-none px-3 py-2 text-xs text-gray-400 animate-pulse">
-              Thinking…
-            </div>
-          </div>
-        )}
-
         <div ref={bottomRef} />
       </div>
 
-      {/* Input */}
       <div className="shrink-0 border-t border-gray-700 p-2">
         {!sessionId && (
           <p className="text-xs text-gray-600 text-center py-1">
@@ -124,7 +141,7 @@ export function IDEChatPanel({ sessionId, contextNodeId, contextNodeName }: IDEC
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Ask about the code… (Enter to send, Shift+Enter for newline)"
+              placeholder="Ask about the code... (Enter to send, Shift+Enter for newline)"
               rows={2}
               className="flex-1 bg-gray-800 border border-gray-600 rounded text-xs text-gray-200 placeholder-gray-600 px-2 py-1.5 resize-none focus:outline-none focus:border-blue-500"
             />
@@ -133,7 +150,7 @@ export function IDEChatPanel({ sessionId, contextNodeId, contextNodeName }: IDEC
               disabled={!input.trim() || isLoading}
               className="bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-semibold px-3 py-2 rounded transition-colors shrink-0"
             >
-              ↑
+              Send
             </button>
           </div>
         )}

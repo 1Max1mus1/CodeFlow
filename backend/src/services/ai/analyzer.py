@@ -22,8 +22,8 @@ async def analyze_operation(
 ) -> Operation:
     """Analyze the operation and return it populated with AIQuestions.
 
-    Question generation is programmatic (no Claude call needed here).
-    Claude is reserved for the diff-generation step in generator.py.
+    Question generation is programmatic (no model call needed here).
+    The model is reserved for the diff-generation step in generator.py.
 
     Returns:
         Operation with status='awaiting_user' and ai_questions populated.

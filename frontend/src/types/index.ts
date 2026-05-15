@@ -116,7 +116,7 @@ export interface ParsedProject {
   dataFlowEdges: DataFlowEdge[]
   entryPoints: EntryPoint[]
   appInstances: AppInstance[]
-  suggestedPort: number | null
+  suggestedPort?: number | null
 }
 
 export interface GraphView {
@@ -169,6 +169,7 @@ export type OperationStatus =
   | 'awaiting_user'
   | 'generating'
   | 'ready'
+  | 'failed'
   | 'applied'
   | 'reverted'
 

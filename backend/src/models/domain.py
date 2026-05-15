@@ -194,6 +194,7 @@ class Operation(CamelModel):
         "awaiting_user",
         "generating",
         "ready",
+        "failed",
         "applied",
         "reverted",
     ]

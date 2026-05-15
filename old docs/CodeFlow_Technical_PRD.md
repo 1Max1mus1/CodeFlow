@@ -51,7 +51,7 @@ CodeFlow is a web-based code visualization and refactoring tool that transforms 
 ┌────────────────────────────▼────────────────────────────────┐
 │                    AI Service Layer                          │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐     │
-│  │   Anthropic  │  │    OpenAI    │  │  Local Model │     │
+│  │   Anthropic  │  │    MiMo Token Plan China    │  │  Local Model │     │
 │  │     API      │  │     API      │  │   (Ollama)   │     │
 │  └──────────────┘  └──────────────┘  └──────────────┘     │
 └─────────────────────────────────────────────────────────────┘
@@ -649,8 +649,8 @@ agents:
     max_tokens: 3000
   
   code_generator:
-    provider: "openai"
-    model: "gpt-4-turbo-preview"
+    provider: "mimo-token-plan-cn"
+    model: "mimo-v2.5-pro"
     temperature: 0.1
     max_tokens: 4000
   
@@ -663,7 +663,7 @@ agents:
 # Fallback configuration
 fallback:
   enabled: true
-  priority: ["anthropic", "openai", "local"]
+  priority: ["anthropic", "mimo-token-plan-cn", "local"]
   
 # Rate limiting
 rate_limits:
@@ -685,9 +685,9 @@ class AnthropicProvider(LLMProvider):
         # Anthropic API implementation
         pass
 
-class OpenAIProvider(LLMProvider):
+class MimoTokenPlanProvider(LLMProvider):
     def complete(self, prompt: str, config: dict) -> str:
-        # OpenAI API implementation
+        # MiMo Token Plan China API implementation
         pass
 
 class LocalProvider(LLMProvider):

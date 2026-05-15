@@ -1,9 +1,7 @@
 import os
-import json
 import uuid
 import traceback
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import JSONResponse
 from src.models.domain import (
     SubmitOperationRequest,
     SubmitOperationResponse,
@@ -15,6 +13,7 @@ from src.models.domain import (
 from src.services.session import store
 from src.services.ai.analyzer import analyze_operation
 from src.services.ai.generator import generate_diffs
+from src.services.ai.mimo import MimoAPIError
 
 router = APIRouter()
 
@@ -98,25 +97,32 @@ async def answer_question(
 
     try:
         ready_op = await generate_diffs(op, project)
-    except Exception as exc:
-        import traceback
-        traceback.print_exc()
+    except MimoAPIError as exc:
         error_op = op.model_copy(
-            update={"status": "awaiting_user", "error_message": str(exc)}
+            update={"status": "failed", "error_message": exc.user_message}
         )
         store.save_operation(error_op)
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        return AnswerQuestionResponse(operation=error_op)
+    except Exception as exc:
+        traceback.print_exc()
+        error_op = op.model_copy(
+            update={
+                "status": "failed",
+                "error_message": f"AI generation failed: {exc}",
+            }
+        )
+        store.save_operation(error_op)
+        return AnswerQuestionResponse(operation=error_op)
 
     store.save_operation(ready_op)
     return AnswerQuestionResponse(operation=ready_op)
 
 
-@router.post("/{operation_id}/apply")
-async def apply_operation(operation_id: str):
+@router.post("/{operation_id}/apply", response_model=ApplyOperationResponse)
+async def apply_operation(operation_id: str) -> ApplyOperationResponse:
     """Write generated diffs to disk."""
     try:
-        result = await _do_apply(operation_id)
-        return JSONResponse(content=json.loads(json.dumps(result, default=str)))
+        return await _do_apply(operation_id)
     except HTTPException:
         raise
     except Exception as exc:
@@ -124,7 +130,7 @@ async def apply_operation(operation_id: str):
         raise HTTPException(status_code=500, detail=f"[{type(exc).__name__}] {exc}") from exc
 
 
-async def _do_apply(operation_id: str):
+async def _do_apply(operation_id: str) -> ApplyOperationResponse:
     op = store.get_operation(operation_id)
     if op is None:
         raise HTTPException(status_code=404, detail=f"Operation {operation_id!r} not found")
@@ -138,7 +144,7 @@ async def _do_apply(operation_id: str):
     if not op.generated_diffs:
         applied_op = op.model_copy(update={"status": "applied"})
         store.save_operation(applied_op)
-        return ApplyOperationResponse(operation=applied_op, modified_files=[]).model_dump(by_alias=True)
+        return ApplyOperationResponse(operation=applied_op, modified_files=[])
 
     # Look up project directly via project_id (no session needed)
     project = store.get_project(op.project_id)
@@ -160,7 +166,7 @@ async def _do_apply(operation_id: str):
 
     applied_op = op.model_copy(update={"status": "applied"})
     store.save_operation(applied_op)
-    return ApplyOperationResponse(operation=applied_op, modified_files=modified_files).model_dump(by_alias=True)
+    return ApplyOperationResponse(operation=applied_op, modified_files=modified_files)
 
 
 @router.post("/{operation_id}/revert", response_model=Operation)

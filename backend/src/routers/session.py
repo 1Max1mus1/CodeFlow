@@ -1,5 +1,7 @@
 import uuid
+import json
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
 from src.models.domain import (
     CreateSessionRequest,
     CreateSessionResponse,
@@ -11,7 +13,8 @@ from src.models.domain import (
 )
 from src.services.session import store
 from src.services.graph.graph_filter import filter_graph
-from src.services.ai.chat import chat_with_project
+from src.services.ai.chat import chat_with_project, chat_with_project_stream
+from src.services.ai.mimo import MimoAPIError
 
 router = APIRouter()
 
@@ -126,3 +129,39 @@ async def chat(session_id: str, body: dict) -> dict:
 
     response = await chat_with_project(project, message, context_node_id, history)
     return {"response": response}
+
+
+@router.post("/{session_id}/chat/stream")
+async def chat_stream(session_id: str, body: dict) -> StreamingResponse:
+    """Stream a chat reply as server-sent events."""
+    session = store.get_session(session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail=f"Session {session_id!r} not found")
+    project = store.get_project(session.project_id)
+    if project is None:
+        raise HTTPException(status_code=404, detail=f"Project {session.project_id!r} not found")
+
+    message: str = body.get("message", "")
+    context_node_id: str | None = body.get("context_node_id", None)
+    history: list[dict] = body.get("history", [])
+
+    async def events():
+        try:
+            async for token in chat_with_project_stream(
+                project,
+                message,
+                context_node_id,
+                history,
+            ):
+                yield _sse("token", {"text": token})
+            yield _sse("done", {})
+        except MimoAPIError as exc:
+            yield _sse("error", {"message": exc.user_message})
+        except Exception as exc:
+            yield _sse("error", {"message": f"AI error: {exc}"})
+
+    return StreamingResponse(events(), media_type="text/event-stream")
+
+
+def _sse(event: str, payload: dict) -> str:
+    return f"event: {event}\ndata: {json.dumps(payload, ensure_ascii=False)}\n\n"

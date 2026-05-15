@@ -33,9 +33,9 @@ async def client():
 # ── /project ──────────────────────────────────────────────────────────────────
 
 async def test_parse_project_returns_valid_shape(client: AsyncClient):
-    response = await client.post("/project/parse", json={"root_path": "/mock/path"})
+    response = await client.post("/project/parse", json={"root_path": _TASK_API_PATH})
     assert response.status_code == 200
-    # Phase 0: verify response shape only (a non-existent path yields empty lists)
+    # Phase 0: verify response shape with a real fixture project.
     data = ParseProjectResponse.model_validate(response.json())
     assert data.project.language == "python"
     assert isinstance(data.project.functions, list)
@@ -43,7 +43,7 @@ async def test_parse_project_returns_valid_shape(client: AsyncClient):
 
 
 async def test_parse_project_functions_have_required_fields(client: AsyncClient):
-    response = await client.post("/project/parse", json={"root_path": "/mock/path"})
+    response = await client.post("/project/parse", json={"root_path": _TASK_API_PATH})
     data = ParseProjectResponse.model_validate(response.json())
 
     for fn in data.project.functions:
@@ -53,6 +53,15 @@ async def test_parse_project_functions_have_required_fields(client: AsyncClient)
         assert isinstance(fn.is_async, bool)
         assert isinstance(fn.calls, list)
         assert isinstance(fn.called_by, list)
+
+
+async def test_parse_project_invalid_path_returns_400(client: AsyncClient):
+    response = await client.post(
+        "/project/parse",
+        json={"root_path": os.path.join(_TASK_API_PATH, "missing")},
+    )
+    assert response.status_code == 400
+    assert "does not exist or is not a directory" in response.json()["detail"]
 
 
 async def test_get_entry_points_returns_list(client: AsyncClient):
@@ -172,7 +181,7 @@ async def test_submit_operation_returns_valid_shape(client: AsyncClient):
     data = SubmitOperationResponse.model_validate(response.json())
     assert data.operation.id != ""
     assert data.operation.status in (
-        "analyzing", "awaiting_user", "generating", "ready", "applied", "reverted"
+        "analyzing", "awaiting_user", "generating", "ready", "failed", "applied", "reverted"
     )
 
 
@@ -215,8 +224,11 @@ async def test_get_operation_has_at_least_one_question(client: AsyncClient):
 
 
 @pytest.mark.skipif(
-    not __import__("os").environ.get("MOONSHOT_API_KEY"),
-    reason="MOONSHOT_API_KEY not set — skipping Claude-dependent test",
+    not (
+        __import__("os").environ.get("XIAOMI_TOKEN_PLAN_CN_API_KEY")
+        or __import__("os").environ.get("ANTHROPIC_AUTH_TOKEN")
+    ),
+    reason="XIAOMI_TOKEN_PLAN_CN_API_KEY not set — skipping AI-dependent test",
 )
 async def test_answer_question_updates_status(client: AsyncClient):
     session_id, fn_id = await _setup_session(client)
@@ -243,8 +255,11 @@ async def test_answer_question_updates_status(client: AsyncClient):
 
 
 @pytest.mark.skipif(
-    not __import__("os").environ.get("MOONSHOT_API_KEY"),
-    reason="MOONSHOT_API_KEY not set — skipping Claude-dependent test",
+    not (
+        __import__("os").environ.get("XIAOMI_TOKEN_PLAN_CN_API_KEY")
+        or __import__("os").environ.get("ANTHROPIC_AUTH_TOKEN")
+    ),
+    reason="XIAOMI_TOKEN_PLAN_CN_API_KEY not set — skipping AI-dependent test",
 )
 async def test_apply_operation_sets_applied_status(client: AsyncClient):
     # Full flow: parse → session → submit → answer → apply
@@ -269,7 +284,7 @@ async def test_apply_operation_sets_applied_status(client: AsyncClient):
 
 
 async def test_revert_operation_sets_reverted_status(client: AsyncClient):
-    # Revert does NOT require Claude — just flip the status
+    # Revert does NOT require AI — just flip the status
     session_id, fn_id = await _setup_session(client)
     submit_resp = await client.post("/operation", json={
         "session_id": session_id,

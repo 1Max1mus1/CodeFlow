@@ -137,7 +137,14 @@ def _build_mock_project(root_path: str) -> ParsedProject:
 @router.post("/parse", response_model=ParseProjectResponse)
 async def parse_project(request: ParseProjectRequest) -> ParseProjectResponse:
     """Parse a local Python project into a graph (Phase 1: real parser)."""
-    project = await asyncio.to_thread(_parse_project, request.root_path)
+    root_path = os.path.abspath(os.path.expanduser(request.root_path))
+    if not os.path.isdir(root_path):
+        raise HTTPException(
+            status_code=400,
+            detail="Project path does not exist or is not a directory",
+        )
+
+    project = await asyncio.to_thread(_parse_project, root_path)
     store.save_project(project)
     return ParseProjectResponse(project=project)
 
@@ -160,9 +167,10 @@ async def read_project_file(
     project = store.get_project(project_id)
     if project is None:
         raise HTTPException(status_code=404, detail=f"Project {project_id!r} not found")
-    abs_path = os.path.normpath(os.path.join(project.root_path, file_path))
+    project_root = os.path.abspath(project.root_path)
+    abs_path = os.path.abspath(os.path.join(project_root, file_path))
     # Security: ensure path stays within root
-    if not abs_path.startswith(os.path.normpath(project.root_path)):
+    if os.path.commonpath([project_root, abs_path]) != project_root:
         raise HTTPException(status_code=400, detail="Path traversal not allowed")
     if not os.path.isfile(abs_path):
         raise HTTPException(status_code=404, detail=f"File {file_path!r} not found")
@@ -182,8 +190,9 @@ async def write_project_file(
         raise HTTPException(status_code=404, detail=f"Project {project_id!r} not found")
     file_path = body.get("file_path", "")
     content = body.get("content", "")
-    abs_path = os.path.normpath(os.path.join(project.root_path, file_path))
-    if not abs_path.startswith(os.path.normpath(project.root_path)):
+    project_root = os.path.abspath(project.root_path)
+    abs_path = os.path.abspath(os.path.join(project_root, file_path))
+    if os.path.commonpath([project_root, abs_path]) != project_root:
         raise HTTPException(status_code=400, detail="Path traversal not allowed")
     with open(abs_path, "w", encoding="utf-8") as f:
         f.write(content)

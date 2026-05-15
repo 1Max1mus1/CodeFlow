@@ -18,6 +18,7 @@ frontend/dist/
 .DS_Store
 Thumbs.db
 *.swp
+run-logs/
 
 # Claude Code internal
 .claude/

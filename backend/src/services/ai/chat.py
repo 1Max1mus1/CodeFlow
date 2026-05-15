@@ -1,17 +1,13 @@
 """General-purpose AI chat assistant with project context."""
-from openai import AsyncOpenAI
+from typing import AsyncIterator
+
 from src.models.domain import ParsedProject
+from src.services.ai.mimo import MIMO_MODEL, MimoTokenPlanClient, make_mimo_client
 from src.settings import SETTINGS
 
-MOONSHOT_BASE_URL = "https://api.moonshot.cn/v1"
-MOONSHOT_MODEL = "moonshot-v1-32k"
 
-
-def _make_client() -> AsyncOpenAI:
-    return AsyncOpenAI(
-        api_key=SETTINGS.moonshot_api_key,
-        base_url=MOONSHOT_BASE_URL,
-    )
+def _make_client() -> MimoTokenPlanClient:
+    return make_mimo_client()
 
 
 def _build_project_summary(project: ParsedProject) -> str:
@@ -57,7 +53,7 @@ async def chat_with_project(
         if fn:
             node_context = (
                 f"\n\nCurrently focused function: `{fn.name}` in `{fn.file_path}` "
-                f"(lines {fn.start_line}–{fn.end_line})\n"
+                f"(lines {fn.start_line}-{fn.end_line})\n"
                 f"```python\n{fn.source_code}\n```"
             )
 
@@ -85,7 +81,7 @@ async def chat_with_project(
     client = _make_client()
     try:
         resp = await client.chat.completions.create(
-            model=MOONSHOT_MODEL,
+            model=SETTINGS.mimo_model or MIMO_MODEL,
             messages=messages,
             temperature=0.3,
             max_tokens=2048,
@@ -93,3 +89,59 @@ async def chat_with_project(
         return resp.choices[0].message.content or ""
     except Exception as exc:
         return f"AI error: {exc}"
+
+
+async def chat_with_project_stream(
+    project: ParsedProject,
+    message: str,
+    context_node_id: str | None,
+    history: list[dict],
+) -> AsyncIterator[str]:
+    """Stream the assistant reply token-by-token with project context."""
+    messages = _build_chat_messages(project, message, context_node_id, history)
+    client = _make_client()
+    async for token in client.chat.completions.stream(
+        model=SETTINGS.mimo_model or MIMO_MODEL,
+        messages=messages,
+        temperature=0.3,
+        max_tokens=2048,
+    ):
+        yield token
+
+
+def _build_chat_messages(
+    project: ParsedProject,
+    message: str,
+    context_node_id: str | None,
+    history: list[dict],
+) -> list[dict[str, str]]:
+    project_summary = _build_project_summary(project)
+
+    node_context = ""
+    if context_node_id:
+        fn = next((f for f in project.functions if f.id == context_node_id), None)
+        if fn:
+            node_context = (
+                f"\n\nCurrently focused function: `{fn.name}` in `{fn.file_path}` "
+                f"(lines {fn.start_line}-{fn.end_line})\n"
+                f"```python\n{fn.source_code}\n```"
+            )
+
+    system_prompt = (
+        "You are an expert software engineer assistant for the Codeflow tool. "
+        "You help developers understand, navigate, and modify their Python codebases. "
+        "You can answer questions about code structure, suggest refactors, write new functions, "
+        "explain logic, identify bugs, and help plan architectural changes.\n\n"
+        f"Here is the project structure:\n{project_summary}"
+        f"{node_context}\n\n"
+        "Be concise and actionable. Use markdown with code blocks when showing code."
+    )
+
+    messages = [{"role": "system", "content": system_prompt}]
+    for h in history[-20:]:
+        role = h.get("role", "user")
+        content = h.get("content", "")
+        if role in ("user", "assistant") and content:
+            messages.append({"role": role, "content": content})
+    messages.append({"role": "user", "content": message})
+    return messages

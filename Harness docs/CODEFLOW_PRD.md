@@ -151,7 +151,7 @@ Every operation follows this state machine:
 | State management | Zustand | Simple, TypeScript-native |
 | Backend framework | Python 3.12 + FastAPI | Native Python AST parsing |
 | Code parsing | Python `ast` + `astroid` | Built-in, cross-file import resolution |
-| AI | Anthropic Claude API (claude-sonnet-4-6) | — |
+| AI | MiMo Token Plan China API (`mimo-v2.5-pro`) | Anthropic Messages-compatible endpoint |
 | Storage | In-memory per session | No DB needed for MVP |
 
 ---

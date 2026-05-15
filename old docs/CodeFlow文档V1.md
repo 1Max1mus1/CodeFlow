@@ -383,7 +383,7 @@ CodeFlow 是一款基于Web的代码可视化与重构工具，通过依赖图+A
     "AI集成": {
         "LLM框架": "LangChain",
         "向量数据库": "Chroma (嵌入式)",  # MVP阶段本地
-        "API": "OpenAI / Anthropic Claude"
+        "API": "MiMo Token Plan China / Anthropic-compatible API"
     },
     "图处理": "NetworkX",  # 依赖图算法
     "任务队列": "无 (MVP同步处理)",  # 后期改Celery
@@ -764,7 +764,7 @@ async def preview_modifications(req: ModifyRequest):
         ]
     }
     """
-    modifier = AICodeModifier(api_key=settings.ANTHROPIC_API_KEY)
+    modifier = AICodeModifier(api_key=settings.XIAOMI_TOKEN_PLAN_CN_API_KEY)
     result = await modifier.apply_changes(req.changes, ...)
     return result
 
@@ -870,7 +870,7 @@ async def compare_versions(
 
 | 任务               | 工作量 | 技术要点           |
 | ------------------ | ------ | ------------------ |
-| LangChain集成      | 2天    | 配置Claude API     |
+| MiMo Token Plan CN集成 | 2天    | 配置 MiMo Token Plan CN API |
 | Prompt工程         | 3天    | 设计代码修改prompt |
 | 参数匹配检测       | 3天    | 分析函数签名       |
 | 硬错误检测         | 2天    | AST分析循环依赖等  |

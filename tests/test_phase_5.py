@@ -5,7 +5,8 @@ incompatibility detection, diff generation, and file apply.
 Run from project root: pytest tests/test_phase_5.py
 Uses example/task-api as the test project.
 
-Tests that call Claude require ANTHROPIC_API_KEY to be set.
+Tests that call MiMo Token Plan CN require XIAOMI_TOKEN_PLAN_CN_API_KEY
+or ANTHROPIC_AUTH_TOKEN to be set.
 Tests that only verify analysis (question generation) run without it.
 """
 import os
@@ -27,10 +28,13 @@ TASK_API_PATH = os.path.normpath(
     os.path.join(os.path.dirname(__file__), "..", "example", "task-api", "src")
 )
 
-HAS_MOONSHOT_KEY = bool(os.environ.get("MOONSHOT_API_KEY"))
-needs_claude = pytest.mark.skipif(
-    not HAS_MOONSHOT_KEY,
-    reason="MOONSHOT_API_KEY not set — skipping AI-dependent test",
+HAS_MIMO_KEY = bool(
+    os.environ.get("XIAOMI_TOKEN_PLAN_CN_API_KEY")
+    or os.environ.get("ANTHROPIC_AUTH_TOKEN")
+)
+needs_ai = pytest.mark.skipif(
+    not HAS_MIMO_KEY,
+    reason="XIAOMI_TOKEN_PLAN_CN_API_KEY not set — skipping AI-dependent test",
 )
 
 # ExternalAPINode with only a subset of JobResponse fields (missing several)
@@ -232,10 +236,10 @@ async def test_get_replace_operation(client, replace_op):
     assert data.status == "awaiting_user"
 
 
-# ── Answer question (cancel, no Claude) ──────────────────────────────────────
+# ── Answer question (cancel, no AI) ──────────────────────────────────────────
 
 async def test_answer_cancel_reaches_ready(client, replace_op):
-    """Answering 'Cancel' should skip Claude and go to ready with no diffs."""
+    """Answering 'Cancel' should skip AI and go to ready with no diffs."""
     op_id = replace_op["id"]
     q_id = replace_op["aiQuestions"][0]["id"]
 
@@ -263,7 +267,7 @@ async def test_answer_stores_user_choice(client, replace_op):
     assert data.operation.ai_questions[0].user_answer == "Cancel"
 
 
-# ── Revert (no Claude) ────────────────────────────────────────────────────────
+# ── Revert (no AI) ────────────────────────────────────────────────────────────
 
 async def test_revert_replace_sets_reverted(client, replace_op):
     op_id = replace_op["id"]
@@ -273,9 +277,9 @@ async def test_revert_replace_sets_reverted(client, replace_op):
     assert data.status == "reverted"
 
 
-# ── Claude-dependent: compatible replace ──────────────────────────────────────
+# ── AI-dependent: compatible replace ──────────────────────────────────────────
 
-@needs_claude
+@needs_ai
 async def test_replace_compatible_api_generates_diffs(client, session_data, get_job_id):
     """End-to-end: add fully-compatible API → submit replace → answer confirm → diffs."""
     session_id = session_data["session"]["id"]
@@ -321,7 +325,7 @@ async def test_replace_compatible_api_generates_diffs(client, session_data, get_
     assert len(data.operation.generated_diffs) >= 1
 
 
-@needs_claude
+@needs_ai
 async def test_replace_apply_writes_files(client, session_data, get_job_id, tmp_path):
     """Apply a replace operation and verify files are modified on disk."""
     # Copy task-api to tmp_path

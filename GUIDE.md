@@ -2,7 +2,7 @@
 
 > **版本：** 当前构建（2026-04）  
 > **语言支持：** Python 3.11+  
-> **AI 模型：** Moonshot（Kimi）`moonshot-v1-32k`
+> **AI 模型：** MiMo Token Plan China `mimo-v2.5-pro`
 
 ---
 
@@ -77,7 +77,7 @@ CodeFlow 的核心创意在于打通了代码工具链中长期割裂的两端�
 |------|---------|
 | Python | 3.11+ |
 | Node.js | 18+ |
-| Moonshot API Key | [申请地址](https://platform.moonshot.cn/) |
+| MiMo Token Plan China Key | [申请地址](https://platform.xiaomimimo.com/token-plan) |
 
 ### 安装与启动
 
@@ -90,7 +90,7 @@ cd CodeFlow
 cd backend
 pip install -r requirements.txt
 cp .env.example .env
-# 编辑 .env，填入你的 MOONSHOT_API_KEY
+# 编辑 .env，填入你的 XIAOMI_TOKEN_PLAN_CN_API_KEY
 python -m uvicorn src.application:create_app --factory --host 0.0.0.0 --port 8000 --reload
 
 # 3. 前端（终端 2）
@@ -296,7 +296,7 @@ C:\Users\Victor\Desktop\Codeflow\example\TestProject
 | **仅支持 Python** | AST 解析器仅处理 `.py` 文件 | 使用 Python 项目 |
 | **内存状态** | 后端重启后所有项目/会话丢失 | 不要在操作途中重启后端 |
 | **入口点检测** | 仅检测 FastAPI `app = FastAPI()` 和 `router = APIRouter()` 装饰的路由 | 其他框架暂不支持 |
-| **AI API 依赖** | 依赖 Moonshot API，若 API 限速（429）需等待重试 | 操作失败时稍后重试 |
+| **AI API 依赖** | 依赖 MiMo Token Plan CN API，若 API 限速（429）需等待重试 | 操作失败时稍后重试 |
 | **无 git 集成** | Apply 直接写文件，不创建 commit | 建议操作前手动 commit |
 | **Windows 端口问题** | 某些情况下端口被 ghost 进程占用 | 换用其他端口号 |
 
@@ -320,7 +320,7 @@ C:\Users\Victor\Desktop\Codeflow\example\TestProject
 
 ### Q: 生成 Diff 时显示 429 错误？
 
-**A:** Moonshot API 限速，稍等片刻后重试操作即可。
+**A:** MiMo Token Plan CN API 限速，稍等片刻后重试操作即可。
 
 ### Q: Apply Changes 后代码变化了，但图谱没更新？
 
@@ -356,7 +356,7 @@ CodeFlow/
 │   │       ├── session/            # 内存 Store（project/session/operation）
 │   │       └── ai/
 │   │           ├── analyzer.py     # 程序化生成澄清问题
-│   │           ├── generator.py    # Moonshot API → FileDiff 生成
+│   │           ├── generator.py    # MiMo Token Plan CN → FileDiff 生成
 │   │           └── prompts.py      # 所有 LLM Prompt 模板
 │   ├── requirements.txt
 │   └── .env.example

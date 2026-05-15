@@ -32,7 +32,7 @@ export function useOperation() {
     setOperationError(null)
     const prevOp = currentOp
     // Optimistic: immediately show "generating" so the form hides and the
-    // user sees feedback while the Moonshot API is in-flight (10–30s).
+    // user sees feedback while the MiMo Token Plan CN API is in-flight (10–30s).
     setActiveOperation({ ...currentOp, status: 'generating' })
 
     try {

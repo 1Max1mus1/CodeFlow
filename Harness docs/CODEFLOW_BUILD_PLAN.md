@@ -323,7 +323,7 @@ export async function addExternalAPI(req: AddExternalAPIRequest): Promise<AddExt
 - When done → status `"ready"`
 
 **4-5: `generator.py` — delete case**
-- Uses Claude API with function source code + question answers as context
+- Uses MiMo Token Plan China API with function source code + question answers as context
 - Generates `list[FileDiff]` for each affected caller file
 
 **4-6: `DiffPreview.tsx`** — renders FileDiff list with syntax highlighting, old/new side-by-side
